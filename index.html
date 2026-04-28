@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homelab Security — Interaktive Simulationen</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #080b14;
+  --surface: #0e1120;
+  --surface2: #141728;
+  --border: #1e2240;
+  --border-bright: #2d3260;
+  --text: #dde1ff;
+  --dim: #5a5e8a;
+  --blue: #4d9fff;
+  --cyan: #00d4ff;
+  --purple: #9b7cff;
+  --green: #00e87a;
+  --red: #ff2e5b;
+  --orange: #ff9500;
+  --yellow: #ffd700;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow-x:hidden;
+  min-height:100vh;
+}
+
+/* ── GRID BACKGROUND ── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(77,159,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(77,159,255,.03) 1px,transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;z-index:0;
+}
+body::after{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 10%,rgba(77,159,255,.06) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 50% at 80% 90%,rgba(155,124,255,.06) 0%,transparent 60%);
+  pointer-events:none;z-index:0;
+}
+section,header,nav,footer{position:relative;z-index:1}
+
+/* ── HEADER ── */
+header{
+  text-align:center;
+  padding:72px 24px 52px;
+}
+.badge{
+  display:inline-block;
+  border:1px solid rgba(0,212,255,.3);
+  color:var(--cyan);
+  font-family:monospace;font-size:.72em;
+  letter-spacing:3px;text-transform:uppercase;
+  padding:5px 16px;border-radius:20px;
+  background:rgba(0,212,255,.06);
+  margin-bottom:22px;
+}
+h1{
+  font-size:clamp(1.9em,4vw,3.2em);
+  font-weight:800;letter-spacing:-.5px;
+  background:linear-gradient(135deg,var(--cyan) 0%,var(--blue) 40%,var(--purple) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:14px;line-height:1.2;
+}
+.header-sub{
+  color:var(--dim);max-width:580px;
+  margin:0 auto;line-height:1.7;font-size:.98em;
+}
+
+/* ── NAV ── */
+nav{
+  display:flex;justify-content:center;
+  gap:10px;padding:0 24px 52px;flex-wrap:wrap;
+}
+nav a{
+  color:var(--dim);text-decoration:none;
+  font-size:.85em;padding:7px 18px;
+  border:1px solid var(--border-bright);
+  border-radius:20px;transition:.25s;
+  font-family:monospace;letter-spacing:.5px;
+}
+nav a:hover{
+  color:var(--cyan);border-color:var(--cyan);
+  background:rgba(0,212,255,.07);
+  box-shadow:0 0 16px rgba(0,212,255,.15);
+}
+
+/* ── SECTION ── */
+section{
+  max-width:1120px;margin:0 auto 100px;
+  padding:0 24px;
+}
+.section-tag{
+  display:flex;align-items:center;gap:14px;margin-bottom:10px;
+}
+.section-num{
+  font-family:monospace;font-size:.75em;
+  color:var(--cyan);background:rgba(0,212,255,.1);
+  border:1px solid rgba(0,212,255,.25);
+  padding:3px 10px;border-radius:4px;
+  letter-spacing:1px;
+}
+h2{font-size:1.7em;font-weight:700;color:var(--text)}
+.section-desc{
+  color:var(--dim);margin-bottom:28px;
+  line-height:1.7;max-width:720px;
+}
+
+/* ── CARD ── */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:18px;padding:26px;
+  position:relative;overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;
+  top:0;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,212,255,.4),transparent);
+}
+
+/* ── BUTTONS ── */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 20px;border-radius:8px;
+  border:1px solid;font-size:.85em;
+  font-weight:600;cursor:pointer;
+  transition:.2s;font-family:inherit;
+  white-space:nowrap;
+}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none !important;box-shadow:none !important}
+.btn-red{background:rgba(255,46,91,.12);border-color:var(--red);color:var(--red)}
+.btn-red:not(:disabled):hover{background:rgba(255,46,91,.22);box-shadow:0 0 18px rgba(255,46,91,.3);transform:translateY(-1px)}
+.btn-blue{background:rgba(77,159,255,.1);border-color:var(--blue);color:var(--blue)}
+.btn-blue:not(:disabled):hover{background:rgba(77,159,255,.2);box-shadow:0 0 18px rgba(77,159,255,.25);transform:translateY(-1px)}
+.btn-green{background:rgba(0,232,122,.1);border-color:var(--green);color:var(--green)}
+.btn-green:not(:disabled):hover{background:rgba(0,232,122,.2);box-shadow:0 0 18px rgba(0,232,122,.25);transform:translateY(-1px)}
+.btn-orange{background:rgba(255,149,0,.1);border-color:var(--orange);color:var(--orange)}
+.btn-orange:not(:disabled):hover{background:rgba(255,149,0,.2);box-shadow:0 0 18px rgba(255,149,0,.25)}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px;align-items:center}
+
+/* ── TOGGLE ── */
+.toggle-wrap{display:flex;align-items:center;gap:10px;margin-left:auto}
+.toggle-wrap span{font-size:.85em;color:var(--dim)}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{display:none}
+.tslider{
+  position:absolute;inset:0;
+  background:var(--border-bright);border-radius:12px;
+  cursor:pointer;transition:.3s;
+}
+.tslider::before{
+  content:'';position:absolute;
+  width:18px;height:18px;left:3px;top:3px;
+  background:var(--dim);border-radius:50%;transition:.3s;
+}
+.toggle input:checked+.tslider{background:rgba(0,232,122,.3)}
+.toggle input:checked+.tslider::before{transform:translateX(20px);background:var(--green)}
+
+/* ── DIVIDER ── */
+.divider{
+  max-width:1120px;margin:0 auto 80px;
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--border-bright),transparent);
+}
+
+/* ══════════════════════════════════════
+   SECTION 1 – LATERAL MOVEMENT
+══════════════════════════════════════ */
+#net-svg{width:100%;height:340px;display:block}
+@keyframes infectPulse{
+  0%,100%{filter:drop-shadow(0 0 5px rgba(255,46,91,.5))}
+  50%{filter:drop-shadow(0 0 14px rgba(255,46,91,.9))}
+}
+@keyframes edgeFlow{to{stroke-dashoffset:-24}}
+.node-circle{transition:stroke .4s,fill .4s}
+.node-g.infected .node-circle{
+  stroke:#ff2e5b !important;
+  fill:rgba(255,46,91,.18) !important;
+  animation:infectPulse 1.2s ease-in-out infinite;
+}
+.edge-line{transition:stroke .4s,stroke-width .4s}
+.edge-line.infected{
+  stroke:#ff2e5b !important;stroke-width:3 !important;
+  stroke-dasharray:10 5;
+  animation:edgeFlow .6s linear infinite;
+}
+.edge-line.blocked-anim{
+  stroke:var(--orange) !important;stroke-width:2.5 !important;
+  stroke-dasharray:6 4;opacity:1 !important;
+}
+.attack-log{
+  background:#060810;border:1px solid var(--border);
+  border-radius:8px;padding:12px 14px;
+  font-family:monospace;font-size:.78em;
+  height:170px;overflow-y:auto;margin-top:16px;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+}
+.log-e{color:var(--red)}
+.log-w{color:var(--orange)}
+.log-i{color:var(--cyan)}
+.log-s{color:var(--green)}
+.log-line{padding:2px 0;animation:fadeSlide .25s ease}
+@keyframes fadeSlide{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}
+.leg{display:flex;align-items:center;gap:7px;font-size:.77em;color:var(--dim)}
+.leg-line{width:22px;height:2px;border-radius:1px}
+
+/* ══════════════════════════════════════
+   SECTION 2 – RANSOMWARE DASHBOARD
+══════════════════════════════════════ */
+.dash-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:14px;margin-bottom:14px;
+}
+.metric-card{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:12px;padding:16px;
+  transition:border-color .5s,box-shadow .5s;
+}
+.metric-card.alarm{
+  border-color:var(--red);
+  box-shadow:0 0 24px rgba(255,46,91,.18);
+  animation:alarmPulse 1.2s ease-in-out infinite;
+}
+@keyframes alarmPulse{
+  0%,100%{box-shadow:0 0 16px rgba(255,46,91,.15)}
+  50%{box-shadow:0 0 36px rgba(255,46,91,.4)}
+}
+.mname{font-size:.72em;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.mval{font-family:monospace;font-size:2em;font-weight:700;transition:color .4s;line-height:1}
+.mval.ok{color:var(--green)}
+.mval.warn{color:var(--orange)}
+.mval.crit{color:var(--red)}
+.msigma{font-family:monospace;font-size:.7em;color:var(--dim);margin-top:3px}
+.mchart{height:70px;margin-top:10px}
+.alert-box{
+  display:none;
+  background:rgba(255,46,91,.1);
+  border:1px solid var(--red);
+  border-radius:12px;padding:16px 20px;
+  margin-bottom:16px;
+  animation:slideDown .35s ease;
+}
+.alert-box.show{display:flex;align-items:center;gap:16px}
+@keyframes slideDown{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}
+.alert-icon{font-size:2em;animation:blinky .7s step-end infinite;flex-shrink:0}
+@keyframes blinky{0%,100%{opacity:1}50%{opacity:0}}
+.alert-title{color:var(--red);font-weight:700;font-size:1em;margin-bottom:4px}
+.alert-desc{color:var(--dim);font-size:.82em;line-height:1.5}
+.info-box{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:12px 16px;
+  font-size:.8em;color:var(--dim);line-height:1.6;
+}
+.info-box strong{color:var(--text)}
+
+/* ══════════════════════════════════════
+   SECTION 3 – KILL CHAIN
+══════════════════════════════════════ */
+.kc-layout{
+  display:grid;
+  grid-template-columns:1fr 270px;
+  gap:22px;align-items:start;
+}
+@media(max-width:780px){.kc-layout{grid-template-columns:1fr}}
+.chain-step{
+  display:flex;gap:14px;
+  margin-bottom:4px;transition:.4s;
+}
+.chain-step.blocked{opacity:.3;filter:grayscale(.5)}
+.step-col{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.step-bubble{
+  width:42px;height:42px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.15em;
+  border:2px solid var(--border-bright);
+  background:var(--surface2);
+  color:var(--dim);transition:.4s;
+  position:relative;z-index:1;
+}
+.step-pipe{
+  width:2px;flex:1;min-height:18px;
+  background:var(--border-bright);
+  transition:.4s;margin:2px 0;
+}
+.chain-step.active .step-bubble{
+  border-color:var(--red);
+  background:rgba(255,46,91,.15);
+  color:var(--red);
+  box-shadow:0 0 18px rgba(255,46,91,.45);
+  animation:infectPulse 1.2s ease-in-out infinite;
+}
+.chain-step.active .step-pipe{
+  background:linear-gradient(to bottom,var(--red),rgba(255,46,91,.2));
+}
+.chain-step.blocked .step-bubble{
+  border-color:var(--green);
+  background:rgba(0,232,122,.1);
+  color:var(--green);
+  animation:none;
+  box-shadow:none;
+}
+.step-body{flex:1;padding:8px 0 22px}
+.step-title{font-size:.92em;font-weight:700;color:var(--text);margin-bottom:4px}
+.step-desc{font-size:.78em;color:var(--dim);line-height:1.55}
+.step-badge{
+  display:none;
+  font-size:.72em;color:var(--green);
+  background:rgba(0,232,122,.08);
+  border:1px solid rgba(0,232,122,.25);
+  padding:2px 10px;border-radius:20px;
+  margin-top:6px;
+}
+.chain-step.blocked .step-badge{display:inline-block}
+.step-running{
+  display:none;font-size:.72em;color:var(--red);
+  background:rgba(255,46,91,.08);
+  border:1px solid rgba(255,46,91,.25);
+  padding:2px 10px;border-radius:20px;
+  margin-top:6px;
+  animation:blinky 1s ease infinite;
+}
+.chain-step.active .step-running{display:inline-block}
+.def-panel{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:14px;padding:18px;
+  position:sticky;top:20px;
+}
+.def-panel h4{
+  font-size:.75em;color:var(--dim);
+  text-transform:uppercase;letter-spacing:2px;
+  margin-bottom:14px;
+}
+.def-item{
+  display:flex;justify-content:space-between;
+  align-items:center;padding:9px 0;
+  border-bottom:1px solid var(--border);
+}
+.def-item:last-child{border-bottom:none}
+.def-name{font-size:.83em;color:var(--text);display:flex;flex-direction:column;gap:2px}
+.def-sub{font-size:.7em;color:var(--dim)}
+.chain-result{
+  display:none;padding:14px 18px;
+  border-radius:10px;margin-top:18px;
+  font-weight:600;font-size:.95em;
+}
+.chain-result.fail{
+  display:block;
+  background:rgba(255,46,91,.1);
+  border:1px solid var(--red);color:var(--red);
+}
+.chain-result.ok{
+  display:block;
+  background:rgba(0,232,122,.08);
+  border:1px solid var(--green);color:var(--green);
+}
+
+/* ── FOOTER ── */
+footer{
+  text-align:center;padding:36px 24px;
+  color:var(--dim);font-size:.82em;
+  border-top:1px solid var(--border);
+  position:relative;z-index:1;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:3px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">Defense-in-Depth · Proxmox Homelab Security</div>
+  <h1>Interaktive Angriffs&shy;simulationen</h1>
+  <p class="header-sub">Drei Szenarien visualisieren die kritischen Sicherheitskonzepte einer privaten Proxmox-Infrastruktur — von Lateral Movement über Ransomware-Erkennung bis zur Kill-Chain-Analyse.</p>
+</header>
+
+<nav>
+  <a href="#lateral">01 — Lateral Movement</a>
+  <a href="#dashboard">02 — Ransomware-Erkennung</a>
+  <a href="#killchain">03 — Kill Chain</a>
+</nav>
+
+<!-- ═══════════════════════════════════════════
+     01  LATERAL MOVEMENT
+═══════════════════════════════════════════ -->
+<section id="lateral">
+  <div class="section-tag">
+    <span class="section-num">01</span>
+    <h2>Lateral Movement Simulation</h2>
+  </div>
+  <p class="section-desc">
+    Ein kompromittierter IoT-Saugroboter als Einstiegspunkt. Starte den Angriff und beobachte,
+    wie er sich in einem flachen Netzwerk ungehindert ausbreitet. Aktiviere VLAN-Segmentierung
+    und sieh, wie dieselbe Attacke an den Netzwerkgrenzen gestoppt wird.
+  </p>
+  <div class="card">
+    <div class="controls">
+      <button class="btn btn-red" id="btn-atk" onclick="startAttack()">⚡ Angriff starten</button>
+      <button class="btn btn-blue" onclick="resetNetwork()">↺ Reset</button>
+      <div class="toggle-wrap">
+        <span>VLAN-Segmentierung</span>
+        <label class="toggle">
+          <input type="checkbox" id="vlan-toggle" onchange="resetNetwork()">
+          <span class="tslider"></span>
+        </label>
+      </div>
+    </div>
+    <svg id="net-svg" viewBox="0 0 800 320"></svg>
+    <div class="legend">
+      <div class="leg"><div class="leg-line" style="background:rgba(255,255,255,.15)"></div>Verbindung</div>
+      <div class="leg"><div class="leg-line" style="background:var(--red)"></div>Kompromittiert</div>
+      <div class="leg"><div class="leg-line" style="background:var(--orange);height:2px;border-top:2px dashed var(--orange);background:none"></div>VLAN-Grenze (geblockt)</div>
+    </div>
+    <div class="attack-log" id="atk-log">
+      <div class="log-line log-i">// System bereit — starte einen Angriff...</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════════════
+     02  RANSOMWARE DASHBOARD
+═══════════════════════════════════════════ -->
+<section id="dashboard">
+  <div class="section-tag">
+    <span class="section-num">02</span>
+    <h2>Ransomware-Erkennungs-Dashboard</h2>
+  </div>
+  <p class="section-desc">
+    Prometheus &amp; Grafana überwachen Systemtelemetrie in Echtzeit. Simuliere Ransomware oder
+    Cryptojacking — beobachte wie CPU-Last, Disk-I/O und Shannon-Entropie aus dem Normbereich
+    ausschlagen und die 3-Sigma-Anomalieerkennung anspringt.
+  </p>
+  <div class="card">
+    <div class="controls">
+      <button class="btn btn-red" onclick="simRansomware()">🔒 Ransomware simulieren</button>
+      <button class="btn btn-orange" onclick="simCrypto()">⛏ Cryptojacking simulieren</button>
+      <button class="btn btn-blue" onclick="resetDash()">↺ Reset</button>
+    </div>
+    <div class="alert-box" id="alert-box">
+      <div class="alert-icon">🚨</div>
+      <div>
+        <div class="alert-title" id="alert-title">3-Sigma-Anomalie erkannt!</div>
+        <div class="alert-desc" id="alert-desc">Kritischer Schwellenwert überschritten.</div>
+      </div>
+    </div>
+    <div class="dash-grid">
+      <div class="metric-card" id="card-cpu">
+        <div class="mname">CPU-Auslastung</div>
+        <div class="mval ok" id="mval-cpu">18%</div>
+        <div class="msigma" id="msig-cpu">σ: +0.3 — Schwelle bei +3σ</div>
+        <div class="mchart"><canvas id="ch-cpu"></canvas></div>
+      </div>
+      <div class="metric-card" id="card-io">
+        <div class="mname">Disk I/O (MB/s)</div>
+        <div class="mval ok" id="mval-io">3.1 MB/s</div>
+        <div class="msigma" id="msig-io">σ: +0.2 — Schwelle bei +3σ</div>
+        <div class="mchart"><canvas id="ch-io"></canvas></div>
+      </div>
+      <div class="metric-card" id="card-ent">
+        <div class="mname">Shannon-Entropie (Ø)</div>
+        <div class="mval ok" id="mval-ent">4.2 bit</div>
+        <div class="msigma" id="msig-ent">σ: +0.1 — Schwelle bei +3σ</div>
+        <div class="mchart"><canvas id="ch-ent"></canvas></div>
+      </div>
+    </div>
+    <div class="info-box">
+      <strong>3-Sigma-Regel (μ ± 3σ):</strong>
+      Ransomware erzeugt gleichzeitig I/O-Spitzen + Entropie-Anstieg &gt; 7.5 bit (Dateien werden verschlüsselt = maximale Zufälligkeit).
+      Cryptojacking: nur CPU-Spike ohne I/O-Korrelat. Das System lernt den Normzustand und alarmiert bei statistischen Ausreißern.
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════════════
+     03  KILL CHAIN
+═══════════════════════════════════════════ -->
+<section id="killchain">
+  <div class="section-tag">
+    <span class="section-num">03</span>
+    <h2>Angriffs-Kill-Chain &amp; Defense-in-Depth</h2>
+  </div>
+  <p class="section-desc">
+    Jede Sicherheitsmaßnahme unterbricht die Angriffskette an einem anderen Punkt.
+    Aktiviere oder deaktiviere die Verteidigungsebenen — das Ergebnis hängt davon ab,
+    welche Barrieren du aufgebaut hast.
+  </p>
+  <div class="card">
+    <div class="controls">
+      <button class="btn btn-red" id="btn-run" onclick="runChain()">⚡ Angriff ausführen</button>
+      <button class="btn btn-blue" onclick="resetChain()">↺ Reset</button>
+      <button class="btn btn-green" onclick="allDefenses(true)">🛡 Alle aktivieren</button>
+      <button class="btn btn-red" style="margin-left:auto" onclick="allDefenses(false)">✕ Alle deaktivieren</button>
+    </div>
+    <div class="kc-layout">
+      <div id="chain-steps"></div>
+      <div class="def-panel">
+        <h4>🛡 Verteidigungsebenen</h4>
+        <div id="def-items"></div>
+      </div>
+    </div>
+    <div class="chain-result" id="chain-result"></div>
+  </div>
+</section>
+
+<footer>
+  Interaktive Visualisierung · Homelab Security mit Proxmox · Defense-in-Depth-Paradigma
+</footer>
+
+<script>
+/* ══════════════════════════════════════════════
+   SECTION 1 — LATERAL MOVEMENT NETWORK
+══════════════════════════════════════════════ */
+
+const NS = 'http://www.w3.org/2000/svg';
+const svgEl = document.getElementById('net-svg');
+const logEl = document.getElementById('atk-log');
+let atkBusy = false;
+
+// Flaches Netzwerk — alle Geräte in einer Broadcast-Domäne
+const NODES_FLAT = [
+  {id:'ext',  x:65,  y:160, icon:'🌐', label:'Internet',       sub:'Angreifer',      color:'#ff2e5b'},
+  {id:'iot',  x:195, y:75,  icon:'🤖', label:'IoT-Gerät',      sub:'Saugroboter',    color:'#ff9500'},
+  {id:'pc',   x:195, y:250, icon:'🖥', label:'Gaming-PC',      sub:'Smartphone',     color:'#4d9fff'},
+  {id:'nc',   x:385, y:60,  icon:'☁️', label:'Nextcloud',      sub:'Webservice',     color:'#4d9fff'},
+  {id:'srv',  x:385, y:255, icon:'🖧',  label:'Server',         sub:'Reverse Proxy',  color:'#00d4c8'},
+  {id:'prox', x:590, y:160, icon:'⚙️', label:'Proxmox GUI',    sub:'Port 8006',      color:'#9b7cff'},
+];
+
+const EDGES_FLAT = [
+  {f:'ext', t:'iot'},
+  {f:'iot', t:'pc'},{f:'iot', t:'nc'},{f:'iot', t:'srv'},{f:'iot', t:'prox'},
+  {f:'pc',  t:'srv'},{f:'pc', t:'prox'},
+  {f:'nc',  t:'srv'},{f:'nc', t:'prox'},
+  {f:'srv', t:'prox'},
+];
+
+// Segmentiertes Netzwerk — 5 VLANs nach Ausarbeitung
+// VLAN 10: Management (MGMT), VLAN 20: NSFW_LAN, VLAN 30: IoT,
+// VLAN 100: Servers Trusted, VLAN 200: DMZ
+// Knoten exakt in Zonenmitte platziert (≥ 40px Abstand zur Zonenkante)
+const NODES_SEG = [
+  {id:'ext',  x:58,  y:160, icon:'🌐', label:'Internet',     sub:'Angreifer',         color:'#ff2e5b'},
+  {id:'fw',   x:162, y:160, icon:'🔥', label:'Firewall',     sub:'OPNsense',          color:'#ff9500'},
+  {id:'iot',  x:268, y:77,  icon:'🤖', label:'IoT-Gerät',    sub:'VLAN 30 — IoT',     color:'#ff9500'},
+  {id:'pc',   x:268, y:248, icon:'🖥', label:'Gaming-PC',    sub:'VLAN 20 — NSFW_LAN',color:'#4d9fff'},
+  {id:'nc',   x:438, y:77,  icon:'☁️', label:'Nextcloud',    sub:'VLAN 200 — DMZ',    color:'#4d9fff'},
+  {id:'srv',  x:438, y:248, icon:'🖧',  label:'Server',       sub:'VLAN 100 — Trusted',color:'#00d4c8'},
+  {id:'prox', x:618, y:160, icon:'⚙️', label:'Proxmox GUI',  sub:'VLAN 10 — MGMT',   color:'#9b7cff'},
+];
+
+const EDGES_SEG = [
+  // Erlaubte Verbindungen
+  {f:'ext',  t:'fw'},               // Internet → Firewall (jeder Verkehr läuft hier durch)
+  {f:'fw',   t:'iot'},              // Firewall → VLAN 30 (IoT hat eingeschränkten Internet-Zugang)
+  {f:'fw',   t:'pc'},               // Firewall → VLAN 20 (NSFW_LAN hat Internet-Zugang)
+  {f:'fw',   t:'nc'},               // Firewall → VLAN 200 (DMZ, Cloudflare-Tunnel)
+  {f:'srv',  t:'prox'},             // VLAN 100 → VLAN 10 (Reverse Proxy ↔ Hypervisor, explizit erlaubt)
+  // Geblockte Lateral-Movement-Versuche aus VLAN 30 (IoT)
+  {f:'iot',  t:'nc',  blocked:true},// VLAN 30 → VLAN 200: GEBLOCKT
+  {f:'iot',  t:'srv', blocked:true},// VLAN 30 → VLAN 100: GEBLOCKT
+  {f:'iot',  t:'pc',  blocked:true},// VLAN 30 → VLAN 20:  GEBLOCKT
+  {f:'iot',  t:'prox',blocked:true},// VLAN 30 → VLAN 10:  GEBLOCKT
+];
+
+const STEPS_FLAT = [
+  {e:{f:'ext',t:'iot'}, n:'iot',  d:500,  msg:'[CRITICAL] IoT-Exploit erfolgreich — Shell auf Saugroboter erlangt', cls:'log-e'},
+  {                               d:850,  msg:'[WARN]     Nmap-Scan gestartet: 192.168.1.0/24 — kein Hindernis...', cls:'log-w'},
+  {e:{f:'iot',t:'nc'},  n:'nc',   d:1300, msg:'[CRITICAL] Lateral → Nextcloud (VLAN 200 DMZ, Port 443) erreichbar!', cls:'log-e'},
+  {e:{f:'iot',t:'pc'},  n:'pc',   d:1650, msg:'[CRITICAL] Lateral → Gaming-PC (VLAN 20, SMB Port 445) kompromittiert!', cls:'log-e'},
+  {e:{f:'iot',t:'srv'}, n:'srv',  d:2000, msg:'[CRITICAL] Lateral → Server/Reverse Proxy (VLAN 100) kompromittiert!', cls:'log-e'},
+  {e:{f:'iot',t:'prox'},n:'prox', d:2450, msg:'[CRITICAL] ⚠ PROXMOX GUI (VLAN 10, Port 8006) — Root-Zugriff erlangt!', cls:'log-e'},
+  {                               d:2900, msg:'🔴 TOTAL COMPROMISE: Gesamte Infrastruktur kompromittiert.', cls:'log-e'},
+];
+
+const STEPS_SEG = [
+  {e:{f:'ext',t:'fw'},                        d:400,  msg:'[INFO]    Verbindungsversuch vom Internet → Firewall (OPNsense)', cls:'log-i'},
+  {e:{f:'fw', t:'iot'},  n:'iot',             d:950,  msg:'[CRITICAL] IoT-Exploit erfolgreich — Shell auf Saugroboter (VLAN 30)', cls:'log-e'},
+  {                                           d:1350, msg:'[WARN]     Nmap-Scan aus VLAN 30 gestartet: 192.168.x.x...', cls:'log-w'},
+  {                                           d:1700, msg:'[INFO]    Versuch: Nextcloud (VLAN 200 — DMZ)...', cls:'log-i'},
+  {e:{f:'iot',t:'nc'},   eBlocked:true,       d:2000, msg:'[OK]      → BLOCKED: VLAN 30 → VLAN 200 — Default-Deny, Paket verworfen.', cls:'log-s'},
+  {                                           d:2400, msg:'[INFO]    Versuch: Gaming-PC (VLAN 20 — NSFW_LAN)...', cls:'log-i'},
+  {e:{f:'iot',t:'pc'},   eBlocked:true,       d:2700, msg:'[OK]      → BLOCKED: VLAN 30 → VLAN 20 — Inter-VLAN-Routing verweigert.', cls:'log-s'},
+  {                                           d:3100, msg:'[INFO]    Versuch: Server (VLAN 100 — Servers Trusted)...', cls:'log-i'},
+  {e:{f:'iot',t:'srv'},  eBlocked:true,       d:3400, msg:'[OK]      → BLOCKED: VLAN 30 → VLAN 100 — nur autorisierte Dienste erlaubt.', cls:'log-s'},
+  {                                           d:3800, msg:'[INFO]    Versuch: Proxmox GUI (VLAN 10 — MGMT)...', cls:'log-i'},
+  {e:{f:'iot',t:'prox'}, eBlocked:true,       d:4100, msg:'[OK]      → BLOCKED: VLAN 30 → VLAN 10 — MGMT nur via VPN erreichbar.', cls:'log-s'},
+  {                                           d:4500, msg:'🟢 ANGRIFF EINGEDÄMMT: IoT-VLAN isoliert — kein Zugriff auf kritische Systeme.', cls:'log-s'},
+];
+
+function el(tag,attrs={}){
+  const e=document.createElementNS(NS,tag);
+  Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));
+  return e;
+}
+
+function buildSVG(){
+  svgEl.innerHTML='';
+  const seg = document.getElementById('vlan-toggle').checked;
+  const nodes = seg ? NODES_SEG : NODES_FLAT;
+  const edges = seg ? EDGES_SEG : EDGES_FLAT;
+
+  if(seg){
+    // Zonen so dimensioniert, dass Knoten-Mittelpunkte ≥ 40px von jeder Kante entfernt liegen.
+    // Knoten-Radius = 27px. Labels reichen bis y+53. Zonenhöhe je 120px → Knoten bei y=77/248.
+    // Horizontale Lücke zwischen Spalten: ~60px — Kanten laufen klar außerhalb der Boxen.
+    const zones=[
+      {label:'VLAN 30 — IoT',          x:222,y:22,  w:93, h:118,c:'rgba(255,149,0,.05)',  s:'rgba(255,149,0,.35)'},
+      {label:'VLAN 20 — NSFW_LAN',     x:222,y:193, w:93, h:118,c:'rgba(77,159,255,.04)', s:'rgba(77,159,255,.32)'},
+      {label:'VLAN 200 — DMZ',         x:392,y:22,  w:93, h:118,c:'rgba(0,212,255,.04)',  s:'rgba(0,212,255,.32)'},
+      {label:'VLAN 100 — Srv. Trusted',x:392,y:193, w:93, h:118,c:'rgba(0,212,180,.04)',  s:'rgba(0,212,180,.32)'},
+      {label:'VLAN 10 — MGMT',         x:572,y:105, w:95, h:112,c:'rgba(155,124,255,.06)',s:'rgba(155,124,255,.38)'},
+    ];
+    zones.forEach(z=>{
+      const r=el('rect',{x:z.x,y:z.y,width:z.w,height:z.h,rx:12,fill:z.c,stroke:z.s,'stroke-width':1.5,'stroke-dasharray':'6 4'});
+      svgEl.appendChild(r);
+      const labelColor=z.s.replace(/[\d.]+\)$/,'0.85)');
+      const t=el('text',{x:z.x+8,y:z.y+13,fill:labelColor,'font-size':9,'font-family':'monospace','font-weight':'600'});
+      t.textContent=z.label;svgEl.appendChild(t);
+    });
+  }
+
+  // Edges
+  edges.forEach(e=>{
+    const fn=nodes.find(n=>n.id===e.f), tn=nodes.find(n=>n.id===e.t);
+    if(!fn||!tn)return;
+    const line=el('line',{
+      x1:fn.x,y1:fn.y,x2:tn.x,y2:tn.y,
+      // Geblockte Kanten initial fast unsichtbar — leuchten erst bei Angriffsanimation auf
+      stroke:e.blocked?'rgba(255,149,0,.06)':'rgba(255,255,255,.12)',
+      'stroke-width':'1.5',
+      'stroke-dasharray':e.blocked?'4 8':'none',
+      id:`edge-${e.f}-${e.t}`,class:'edge-line'
+    });
+    svgEl.appendChild(line);
+  });
+
+  // Nodes
+  nodes.forEach(n=>{
+    const g=el('g',{id:`node-${n.id}`,class:'node-g',transform:`translate(${n.x},${n.y})`});
+    const c=el('circle',{r:27,fill:'rgba(14,17,32,.95)',stroke:n.color,'stroke-width':2,class:'node-circle'});
+    g.appendChild(c);
+    const ico=el('text',{'text-anchor':'middle','dominant-baseline':'central','font-size':16});
+    ico.textContent=n.icon;g.appendChild(ico);
+    const lbl=el('text',{'text-anchor':'middle',y:41,fill:'#dde1ff','font-size':10.5,'font-family':'Segoe UI,sans-serif','font-weight':600});
+    lbl.textContent=n.label;g.appendChild(lbl);
+    const sub=el('text',{'text-anchor':'middle',y:53,fill:'#5a5e8a','font-size':8.5,'font-family':'monospace'});
+    sub.textContent=n.sub;g.appendChild(sub);
+    svgEl.appendChild(g);
+  });
+}
+
+function ts(){const n=new Date();return`[${n.toTimeString().slice(0,8)}]`}
+function addLog(msg,cls){
+  const d=document.createElement('div');
+  d.className=`log-line ${cls}`;d.textContent=`${ts()} ${msg}`;
+  logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;
+}
+function infEdge(f,t,isBlocked){
+  const l=document.getElementById(`edge-${f}-${t}`);
+  if(!l)return;
+  if(isBlocked) l.classList.add('blocked-anim');
+  else          l.classList.add('infected');
+}
+function infNode(id){document.getElementById(`node-${id}`)?.classList.add('infected')}
+
+function startAttack(){
+  if(atkBusy)return;atkBusy=true;
+  document.getElementById('btn-atk').disabled=true;
+  logEl.innerHTML='';
+  const seg=document.getElementById('vlan-toggle').checked;
+  const steps=seg?STEPS_SEG:STEPS_FLAT;
+  steps.forEach(s=>{
+    setTimeout(()=>{
+      if(s.e) infEdge(s.e.f,s.e.t,!!s.eBlocked);
+      if(s.n) infNode(s.n);
+      if(s.msg) addLog(s.msg,s.cls);
+    },s.d);
+  });
+  const last=Math.max(...steps.map(s=>s.d))+600;
+  setTimeout(()=>{atkBusy=false;document.getElementById('btn-atk').disabled=false;},last);
+}
+function resetNetwork(){
+  atkBusy=false;
+  document.getElementById('btn-atk').disabled=false;
+  logEl.innerHTML='<div class="log-line log-i">// System bereit — starte einen Angriff...</div>';
+  buildSVG();
+}
+buildSVG();
+
+
+/* ══════════════════════════════════════════════
+   SECTION 2 — RANSOMWARE DASHBOARD
+══════════════════════════════════════════════ */
+
+const PTS=30;
+let dashTick=0,dashMode='idle',dashTimer=null,alerted=false;
+let cpuD=gen(PTS,()=>rCPU());
+let ioD =gen(PTS,()=>rIO());
+let entD=gen(PTS,()=>rEnt());
+
+function gen(n,f){return Array.from({length:n},f)}
+function rCPU(){return 14+Math.random()*14}
+function rIO() {return 2+Math.random()*2.5}
+function rEnt(){return 4.0+Math.random()*0.7}
+
+const CHART_OPTS={
+  type:'line',
+  options:{
+    animation:false,responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{enabled:false}},
+    scales:{x:{display:false},y:{display:false,grid:{display:false}}},
+    elements:{point:{radius:0},line:{tension:.45,borderWidth:2}}
+  }
+};
+
+function mkChart(id,data,color){
+  const ctx=document.getElementById(id).getContext('2d');
+  return new Chart(ctx,{
+    ...CHART_OPTS,
+    data:{
+      labels:Array(PTS).fill(''),
+      datasets:[{
+        data:[...data],
+        borderColor:color,
+        backgroundColor:color.replace('rgb','rgba').replace(')',',0.08)'),
+        fill:true
+      }]
+    }
+  });
+}
+
+const chCPU=mkChart('ch-cpu',cpuD,'rgb(0,232,122)');
+const chIO =mkChart('ch-io', ioD, 'rgb(77,159,255)');
+const chEnt=mkChart('ch-ent',entD,'rgb(155,124,255)');
+
+const CPU_M=21,CPU_S=5, IO_M=3.2,IO_S=1.1, ENT_M=4.35,ENT_S=.28;
+
+function sigma(v,m,s){return((v-m)/s).toFixed(1)}
+function sigClass(v,m,s){const x=(v-m)/s;return x>3?'crit':x>2?'warn':'ok'}
+
+function updMetric(valId,sigId,cardId,v,unit,m,s){
+  const sg=sigma(v,m,s);
+  document.getElementById(valId).textContent=v.toFixed(unit==='%'?0:1)+' '+unit;
+  document.getElementById(valId).className='mval '+sigClass(v,m,s);
+  document.getElementById(sigId).textContent=`σ: ${sg>0?'+':''}${sg} — Schwelle bei +3σ`;
+  const alm=(v-m)/s>3;
+  document.getElementById(cardId).classList.toggle('alarm',alm);
+  return (v-m)/s;
+}
+
+function pushDat(arr,v){arr.push(v);if(arr.length>PTS)arr.shift()}
+
+function updChartColor(ch,sigma){
+  const c=sigma>3?'rgb(255,46,91)':sigma>2?'rgb(255,149,0)':null;
+  if(c){ch.data.datasets[0].borderColor=c;ch.data.datasets[0].backgroundColor=c.replace('rgb','rgba').replace(')',',0.07)')}
+}
+
+function dashTick_fn(){
+  dashTick++;
+  const p=Math.max(0,Math.min(1,(dashTick-4)/9));
+  let cpu,io,ent;
+
+  if(dashMode==='ransomware'&&dashTick>4){
+    cpu=18+p*72+Math.random()*4;
+    io =2.5+p*130+Math.random()*8;
+    ent=4.2+p*3.6+Math.random()*.12;
+  }else if(dashMode==='crypto'&&dashTick>4){
+    cpu=18+p*78+Math.random()*4;
+    io =rIO();ent=rEnt();
+  }else{
+    cpu=rCPU();io=rIO();ent=rEnt();
+  }
+
+  pushDat(cpuD,cpu);pushDat(ioD,io);pushDat(entD,ent);
+  chCPU.data.datasets[0].data=[...cpuD];chCPU.update('none');
+  chIO.data.datasets[0].data =[...ioD]; chIO.update('none');
+  chEnt.data.datasets[0].data=[...entD];chEnt.update('none');
+
+  const sCPU=updMetric('mval-cpu','msig-cpu','card-cpu',cpu,'%',CPU_M,CPU_S);
+  const sIO =updMetric('mval-io', 'msig-io', 'card-io', io,'MB/s',IO_M,IO_S);
+  const sEnt=updMetric('mval-ent','msig-ent','card-ent',ent,'bit',ENT_M,ENT_S);
+
+  updChartColor(chCPU,sCPU);updChartColor(chIO,sIO);updChartColor(chEnt,sEnt);
+
+  if(!alerted&&((dashMode==='ransomware'&&sIO>3&&sEnt>3)||(dashMode==='crypto'&&sCPU>3))){
+    alerted=true;
+    const box=document.getElementById('alert-box');
+    box.classList.add('show');
+    if(dashMode==='ransomware'){
+      document.getElementById('alert-title').textContent='🔒 RANSOMWARE ERKANNT — 3-Sigma-Anomalie!';
+      document.getElementById('alert-desc').textContent='Simultaner Anstieg: I/O-Spike + Shannon-Entropie > 7.5 bit. Dateiverschlüsselung aktiv! Empfehlung: fsfreeze ausführen, VM isolieren.';
+    }else{
+      document.getElementById('alert-title').textContent='⛏ CRYPTOJACKING ERKANNT — CPU-Anomalie!';
+      document.getElementById('alert-desc').textContent='CPU-Last dauerhaft > 90% ohne I/O-Korrelat. Kein Entropie-Anstieg. Verdacht: heimliches Krypto-Mining durch unautorisierten Prozess.';
+    }
+    setTimeout(()=>{if(dashMode!=='idle'){clearInterval(dashTimer);dashTimer=null}},9000);
+  }
+}
+
+function simRansomware(){resetDash();dashMode='ransomware';dashTick=0;alerted=false;dashTimer=setInterval(dashTick_fn,280)}
+function simCrypto()   {resetDash();dashMode='crypto';   dashTick=0;alerted=false;dashTimer=setInterval(dashTick_fn,280)}
+
+function resetDash(){
+  if(dashTimer){clearInterval(dashTimer);dashTimer=null}
+  dashMode='idle';dashTick=0;alerted=false;
+  document.getElementById('alert-box').classList.remove('show');
+  ['card-cpu','card-io','card-ent'].forEach(id=>document.getElementById(id).classList.remove('alarm'));
+  cpuD=gen(PTS,rCPU);ioD=gen(PTS,rIO);entD=gen(PTS,rEnt);
+  [[chCPU,'rgb(0,232,122)'],[chIO,'rgb(77,159,255)'],[chEnt,'rgb(155,124,255)']].forEach(([ch,c])=>{
+    ch.data.datasets[0].borderColor=c;
+    ch.data.datasets[0].backgroundColor=c.replace('rgb','rgba').replace(')',',0.08)');
+    ch.data.datasets[0].data=[...cpuD];ch.update('none');
+  });
+  chIO.data.datasets[0].data=[...ioD];chIO.update('none');
+  chEnt.data.datasets[0].data=[...entD];chEnt.update('none');
+  ['mval-cpu','mval-io','mval-ent'].forEach(id=>document.getElementById(id).className='mval ok');
+  dashTimer=setInterval(()=>{
+    if(dashMode!=='idle')return;
+    pushDat(cpuD,rCPU());pushDat(ioD,rIO());pushDat(entD,rEnt());
+    chCPU.data.datasets[0].data=[...cpuD];chCPU.update('none');
+    chIO.data.datasets[0].data =[...ioD]; chIO.update('none');
+    chEnt.data.datasets[0].data=[...entD];chEnt.update('none');
+  },900);
+}
+resetDash();
+
+
+/* ══════════════════════════════════════════════
+   SECTION 3 — KILL CHAIN
+══════════════════════════════════════════════ */
+
+const KC_STEPS=[
+  {id:'shodan',  icon:'🔍', title:'Shodan-Scan: Dienst entdeckt',
+   desc:'Automatisierte Scanner erfassen exponierte Ports (8006 / 443). Das System wird in der Shodan-Datenbank indiziert und ist weltweit für Angreifer sichtbar.',
+   blocker:'zeroport', blockerName:'Zero Port-Forwarding / Cloudflare Tunnel',
+   running:'Port 8006 & Nextcloud (443) öffentlich sichtbar — Shodan indiziert...'},
+  {id:'brute',   icon:'🔑', title:'Brute-Force & Credential Stuffing',
+   desc:'Tausende gestohlene Zugangsdaten werden automatisiert getestet. Ohne MFA oder Rate-Limiting ist ein erfolgreicher Login nur eine Frage der Zeit.',
+   blocker:'crowdsec', blockerName:'CrowdSec IPS + MFA / FIDO2',
+   running:'4.200 Login-Versuche/min gegen Port 8006 — keine Sperrung aktiv...'},
+  {id:'rce',     icon:'💥', title:'Zero-Day: Shell in LXC-Container',
+   desc:'Eine ungepatchte Lücke in Nextcloud ermöglicht Remote Code Execution. Der Angreifer landet mit einer Shell direkt in einem privilegierten LXC-Container.',
+   blocker:'waf', blockerName:'Cloudflare WAF (filtert RCE / SQLi am Edge)',
+   running:'RCE-Payload zugestellt — interaktive Shell in Container #101 aktiv...'},
+  {id:'escape',  icon:'🚪', title:'Container Escape → Root auf Proxmox-Host',
+   desc:'Der privilegierte LXC-Container teilt den Kernel mit dem Host: UID 0 im Container = UID 0 auf dem physischen Host. Via SYS_RAWIO-Capability oder TOCTTOU gelingt der Ausbruch.',
+   blocker:'unpriv', blockerName:'Unprivilegierte Container (UID Namespace Mapping)',
+   running:'UID 0 im Container = UID 0 auf Proxmox-Host — Escape erfolgreich...'},
+  {id:'lateral', icon:'↔️', title:'Lateral Movement im Netzwerk',
+   desc:'Vom kompromittierten Proxmox-Host aus werden alle Geräte im flachen Netzwerk gescannt. Ohne VLAN-Grenzen ist jedes Gerät direkt angreifbar.',
+   blocker:'vlan', blockerName:'VLAN-Segmentierung + Default-Deny Firewall',
+   running:'Nmap 192.168.1.0/24 — 23 Hosts erreichbar, Angriffe laufen...'},
+  {id:'ransom',  icon:'💣', title:'Ransomware auf allen Systemen',
+   desc:'Verschlüsselungssoftware wird auf allen erreichbaren Systemen ausgerollt. CPU-Last und Shannon-Entropie der Dateien explodieren (> 7.5 bit).',
+   blocker:null, running:'Verschlüssele /home /var /mnt /nas — Entropie steigt auf 7.8 bit...'},
+  {id:'backup',  icon:'🗑️', title:'Alle Backups gelöscht',
+   desc:'Mit den erbeuteten Host-Credentials werden sämtliche PBS-Snapshots vernichtet — bevor die Lösegeldforderung erscheint. Kein Restore möglich.',
+   blocker:'pbs', blockerName:'Proxmox Backup Server (Pull-Verfahren / Immutable Storage)',
+   running:'Lösche alle PBS-Snapshots — vor Lösegeldforderung...'},
+];
+
+const DEFENSES=[
+  {key:'zeroport',label:'Zero Port-Forwarding',     sub:'Cloudflare Tunnel / WireGuard VPN',   on:false},
+  {key:'crowdsec',label:'CrowdSec IPS + MFA',        sub:'FIDO2 YubiKey / Brute-Force-Schutz',  on:false},
+  {key:'waf',     label:'Cloudflare WAF',            sub:'Blockiert RCE / SQLi am Edge',        on:false},
+  {key:'unpriv',  label:'Unprivilegierte Container', sub:'UID Namespace Mapping',               on:false},
+  {key:'vlan',    label:'VLAN-Segmentierung',        sub:'Default-Deny Inter-VLAN-Firewall',    on:false},
+  {key:'pbs',     label:'Pull-Backup PBS',           sub:'Immutable Storage / Least Privilege', on:false},
+];
+
+let chainBusy=false;
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+function renderDefenses(){
+  const cont=document.getElementById('def-items');
+  cont.innerHTML='';
+  DEFENSES.forEach(d=>{
+    const div=document.createElement('div');
+    div.className='def-item';
+    div.innerHTML=`
+      <div class="def-name">
+        <span>${d.label}</span>
+        <span class="def-sub">${d.sub}</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" ${d.on?'checked':''} onchange="DEFENSES.find(x=>x.key==='${d.key}').on=this.checked;resetChain()">
+        <span class="tslider"></span>
+      </label>`;
+    cont.appendChild(div);
+  });
+}
+
+function renderSteps(states={}){
+  const cont=document.getElementById('chain-steps');
+  cont.innerHTML='';
+  KC_STEPS.forEach((s,i)=>{
+    const state=states[s.id]||'idle';
+    const div=document.createElement('div');
+    div.className=`chain-step ${state==='active'?'active':state==='blocked'?'blocked':''}`;
+    div.id=`kcs-${s.id}`;
+    div.innerHTML=`
+      <div class="step-col">
+        <div class="step-bubble">${s.icon}</div>
+        ${i<KC_STEPS.length-1?'<div class="step-pipe"></div>':''}
+      </div>
+      <div class="step-body">
+        <div class="step-title">${s.title}</div>
+        <div class="step-desc">${s.desc}</div>
+        ${s.blocker?`<div class="step-badge">✓ Geblockt durch: ${s.blockerName}</div>`:''}
+        <div class="step-running">● ${s.running}</div>
+      </div>`;
+    cont.appendChild(div);
+  });
+}
+
+function setStep(id,state){
+  const el=document.getElementById(`kcs-${id}`);
+  if(el) el.className=`chain-step ${state==='active'?'active':state==='blocked'?'blocked':''}`;
+}
+
+async function runChain(){
+  if(chainBusy)return;
+  chainBusy=true;
+  document.getElementById('btn-run').disabled=true;
+  document.getElementById('chain-result').className='chain-result';
+  renderSteps();
+  await sleep(200);
+
+  let blockedAt=null;
+  for(const step of KC_STEPS){
+    setStep(step.id,'active');
+    await sleep(850);
+    if(step.blocker){
+      const def=DEFENSES.find(d=>d.key===step.blocker);
+      if(def?.on){
+        setStep(step.id,'blocked');
+        blockedAt=step;break;
+      }
+    }
+    await sleep(550);
+  }
+
+  const res=document.getElementById('chain-result');
+  if(blockedAt){
+    res.className='chain-result ok';
+    res.innerHTML=`✓ Angriff gestoppt bei: <strong>${blockedAt.title}</strong><br><small>Schutzmaßnahme: ${blockedAt.blockerName}</small>`;
+  }else{
+    res.className='chain-result fail';
+    res.innerHTML='✗ Angriff vollständig erfolgreich — Gesamte Infrastruktur kompromittiert. Alle Backups gelöscht.';
+  }
+  chainBusy=false;
+  document.getElementById('btn-run').disabled=false;
+}
+
+function resetChain(){
+  chainBusy=false;
+  document.getElementById('btn-run').disabled=false;
+  renderSteps();
+  document.getElementById('chain-result').className='chain-result';
+}
+
+function allDefenses(on){
+  DEFENSES.forEach(d=>d.on=on);
+  renderDefenses();resetChain();
+}
+
+renderDefenses();
+renderSteps();
+</script>
+</body>
+</html>
