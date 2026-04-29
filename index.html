@@ -382,6 +382,19 @@ footer{
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:3px}
+
+/* ── DISCLAIMER ── */
+.disclaimer{
+  max-width:820px;margin:0 auto 28px;
+  padding:10px 22px;
+  border:1px solid rgba(255,149,0,.28);
+  border-radius:8px;
+  background:rgba(255,149,0,.04);
+  color:var(--dim);font-size:.79em;
+  line-height:1.6;text-align:center;
+  position:relative;z-index:1;
+}
+.disclaimer strong{color:var(--orange)}
 </style>
 </head>
 <body>
@@ -391,6 +404,10 @@ footer{
   <h1>Interaktive Angriffs&shy;simulationen</h1>
   <p class="header-sub">Drei Szenarien visualisieren die kritischen Sicherheitskonzepte einer privaten Proxmox-Infrastruktur — von Lateral Movement über Ransomware-Erkennung bis zur Kill-Chain-Analyse.</p>
 </header>
+
+<div class="disclaimer">
+  <strong>Hinweis:</strong> Die folgenden Darstellungen und Simulationen sind vereinfacht und dienen ausschließlich der anschaulichen Visualisierung von Sicherheitskonzepten. Sie sind nicht zwingend fachlich korrekt oder technisch vollständig realistisch.
+</div>
 
 <nav>
   <a href="#lateral">01 — Lateral Movement</a>
@@ -571,17 +588,23 @@ const NODES_SEG = [
 ];
 
 const EDGES_SEG = [
-  // Erlaubte Verbindungen
-  {f:'ext',  t:'fw'},               // Internet → Firewall (jeder Verkehr läuft hier durch)
-  {f:'fw',   t:'iot'},              // Firewall → VLAN 30 (IoT hat eingeschränkten Internet-Zugang)
-  {f:'fw',   t:'pc'},               // Firewall → VLAN 20 (NSFW_LAN hat Internet-Zugang)
-  {f:'fw',   t:'nc'},               // Firewall → VLAN 200 (DMZ, Cloudflare-Tunnel)
-  {f:'srv',  t:'prox'},             // VLAN 100 → VLAN 10 (Reverse Proxy ↔ Hypervisor, explizit erlaubt)
+  // Aktive, erlaubte Verbindungen (durchgehende Linien + Pfeil)
+  {f:'ext',  t:'fw'},                          // Internet → Firewall (eingehender Traffic / NAT)
+  {f:'fw',   t:'srv'},                          // Firewall → Server / Reverse Proxy (VLAN 100)
+  {f:'srv',  t:'nc'},                           // Server → Nextcloud (VLAN 200)
+  {f:'srv',  t:'prox'},                         // Server → Proxmox MGMT (explizit erlaubt)
+  {f:'pc',   t:'nc'},                           // Gaming-PC → Nextcloud (lokaler Zugriff)
+  {f:'pc',   t:'iot'},                          // Gaming-PC → IoT (Saugroboter steuern, unidirektional)
+  {f:'iot',  t:'fw'},                           // IoT → Firewall (ausgehend: Cloud-Dienste / Updates)
+  {f:'fw',   t:'iot'},                          // Firewall → IoT (Antwortverkehr)
+  {f:'fw',   t:'pc'},                           // Firewall → Gaming-PC (Internet-Zugang)
+  // Optional / eingeschränkt (gepunktete Linie + Pfeil)
+  {f:'pc',   t:'prox', optional:true},          // Gaming-PC → Proxmox GUI (eingeschränkter Admin)
   // Geblockte Lateral-Movement-Versuche aus VLAN 30 (IoT)
-  {f:'iot',  t:'nc',  blocked:true},// VLAN 30 → VLAN 200: GEBLOCKT
-  {f:'iot',  t:'srv', blocked:true},// VLAN 30 → VLAN 100: GEBLOCKT
-  {f:'iot',  t:'pc',  blocked:true},// VLAN 30 → VLAN 20:  GEBLOCKT
-  {f:'iot',  t:'prox',blocked:true},// VLAN 30 → VLAN 10:  GEBLOCKT
+  {f:'iot',  t:'nc',   blocked:true},           // VLAN 30 → VLAN 200: GEBLOCKT
+  {f:'iot',  t:'srv',  blocked:true},           // VLAN 30 → VLAN 100: GEBLOCKT
+  {f:'iot',  t:'pc',   blocked:true},           // VLAN 30 → VLAN 20:  GEBLOCKT
+  {f:'iot',  t:'prox', blocked:true, showX:true},// VLAN 30 → VLAN 10: GEBLOCKT (X-Symbol)
 ];
 
 const STEPS_FLAT = [
@@ -615,11 +638,33 @@ function el(tag,attrs={}){
   return e;
 }
 
+// Berechnet Kantenpunkte, die an den Knotenrändern starten/enden (für Pfeile)
+function edgePoints(fn,tn){
+  const dx=tn.x-fn.x, dy=tn.y-fn.y;
+  const d=Math.hypot(dx,dy)||1;
+  const ux=dx/d, uy=dy/d, R=27;
+  return {x1:fn.x+ux*R, y1:fn.y+uy*R, x2:tn.x-ux*R, y2:tn.y-uy*R};
+}
+
 function buildSVG(){
   svgEl.innerHTML='';
   const seg = document.getElementById('vlan-toggle').checked;
   const nodes = seg ? NODES_SEG : NODES_FLAT;
   const edges = seg ? EDGES_SEG : EDGES_FLAT;
+
+  // SVG-Pfeilmarkierung (context-stroke = erbt Linienfarbe inkl. Animationen)
+  if(seg){
+    const defs=el('defs');
+    const mk=el('marker',{id:'arrowhead',markerWidth:'8',markerHeight:'7',
+      refX:'8',refY:'3.5',orient:'auto',markerUnits:'userSpaceOnUse'});
+    const mp=el('path');
+    mp.setAttribute('d','M0,0 L8,3.5 L0,7 z');
+    mp.setAttribute('fill','context-stroke');
+    mp.setAttribute('opacity','0.85');
+    mk.appendChild(mp);
+    defs.appendChild(mk);
+    svgEl.appendChild(defs);
+  }
 
   if(seg){
     // Zonen so dimensioniert, dass Knoten-Mittelpunkte ≥ 40px von jeder Kante entfernt liegen.
@@ -645,14 +690,21 @@ function buildSVG(){
   edges.forEach(e=>{
     const fn=nodes.find(n=>n.id===e.f), tn=nodes.find(n=>n.id===e.t);
     if(!fn||!tn)return;
+    // Im segmentierten Modus: Linien an Knotenrändern starten/enden (für Pfeile)
+    const pts = seg ? edgePoints(fn,tn) : {x1:fn.x,y1:fn.y,x2:tn.x,y2:tn.y};
+    const stroke = e.blocked  ? 'rgba(255,149,0,.06)'
+                 : e.optional ? 'rgba(255,255,255,.09)'
+                 :               'rgba(255,255,255,.18)';
+    const dash   = e.blocked  ? '4 8'
+                 : e.optional ? '7 5'
+                 :               'none';
     const line=el('line',{
-      x1:fn.x,y1:fn.y,x2:tn.x,y2:tn.y,
-      // Geblockte Kanten initial fast unsichtbar — leuchten erst bei Angriffsanimation auf
-      stroke:e.blocked?'rgba(255,149,0,.06)':'rgba(255,255,255,.12)',
-      'stroke-width':'1.5',
-      'stroke-dasharray':e.blocked?'4 8':'none',
-      id:`edge-${e.f}-${e.t}`,class:'edge-line'
+      x1:pts.x1,y1:pts.y1,x2:pts.x2,y2:pts.y2,
+      stroke, 'stroke-width':'1.5', 'stroke-dasharray':dash,
+      id:`edge-${e.f}-${e.t}`, class:'edge-line'
     });
+    // Pfeilspitze nur im segmentierten Modus für erlaubte/optionale Kanten
+    if(seg && !e.blocked) line.setAttribute('marker-end','url(#arrowhead)');
     svgEl.appendChild(line);
   });
 
@@ -669,6 +721,24 @@ function buildSVG(){
     sub.textContent=n.sub;g.appendChild(sub);
     svgEl.appendChild(g);
   });
+
+  // X-Blockade-Symbol zwischen VLAN 30 (IoT) und VLAN 10 (MGMT)
+  if(seg){
+    const xEdge=EDGES_SEG.find(e=>e.showX);
+    if(xEdge){
+      const fn=nodes.find(n=>n.id===xEdge.f), tn=nodes.find(n=>n.id===xEdge.t);
+      if(fn&&tn){
+        const mx=(fn.x+tn.x)/2, my=(fn.y+tn.y)/2;
+        const xg=el('g',{transform:`translate(${mx},${my})`});
+        xg.appendChild(el('circle',{r:10,fill:'rgba(255,46,91,.18)',stroke:'var(--red)','stroke-width':1.5}));
+        const xt=el('text',{'text-anchor':'middle','dominant-baseline':'central',
+          fill:'var(--red)','font-size':11,'font-weight':'bold','font-family':'monospace'});
+        xt.textContent='✕';
+        xg.appendChild(xt);
+        svgEl.appendChild(xg);
+      }
+    }
+  }
 }
 
 function ts(){const n=new Date();return`[${n.toTimeString().slice(0,8)}]`}
@@ -835,13 +905,20 @@ function resetDash(){
   });
   chIO.data.datasets[0].data=[...ioD];chIO.update('none');
   chEnt.data.datasets[0].data=[...entD];chEnt.update('none');
-  ['mval-cpu','mval-io','mval-ent'].forEach(id=>document.getElementById(id).className='mval ok');
+  // Angezeigte Werte sofort auf Idle-Normalwerte zurücksetzen
+  updMetric('mval-cpu','msig-cpu','card-cpu',cpuD[cpuD.length-1],'%',CPU_M,CPU_S);
+  updMetric('mval-io', 'msig-io', 'card-io', ioD[ioD.length-1], 'MB/s',IO_M,IO_S);
+  updMetric('mval-ent','msig-ent','card-ent',entD[entD.length-1],'bit',ENT_M,ENT_S);
   dashTimer=setInterval(()=>{
     if(dashMode!=='idle')return;
-    pushDat(cpuD,rCPU());pushDat(ioD,rIO());pushDat(entD,rEnt());
+    const cpu=rCPU(), io=rIO(), ent=rEnt();
+    pushDat(cpuD,cpu);pushDat(ioD,io);pushDat(entD,ent);
     chCPU.data.datasets[0].data=[...cpuD];chCPU.update('none');
     chIO.data.datasets[0].data =[...ioD]; chIO.update('none');
     chEnt.data.datasets[0].data=[...entD];chEnt.update('none');
+    updMetric('mval-cpu','msig-cpu','card-cpu',cpu,'%',CPU_M,CPU_S);
+    updMetric('mval-io', 'msig-io', 'card-io', io, 'MB/s',IO_M,IO_S);
+    updMetric('mval-ent','msig-ent','card-ent',ent,'bit',ENT_M,ENT_S);
   },900);
 }
 resetDash();
